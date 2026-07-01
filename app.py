@@ -1,13 +1,25 @@
+import os
 from flask import Flask, request
 from twilio.twiml.messaging_response import MessagingResponse
+import anthropic
 
 app = Flask(__name__)
+client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
 
 @app.route("/sms", methods=["POST"])
 def sms_reply():
     incoming_msg = request.form.get("Body", "")
+    
+    message = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1000,
+        system="You are a helpful personal assistant. Keep replies concise since they are delivered via SMS.",
+        messages=[{"role": "user", "content": incoming_msg}]
+    )
+    
+    reply = message.content[0].text
     resp = MessagingResponse()
-    resp.message(f"You said: {incoming_msg}")
+    resp.message(reply)
     return str(resp)
 
 @app.route("/")
